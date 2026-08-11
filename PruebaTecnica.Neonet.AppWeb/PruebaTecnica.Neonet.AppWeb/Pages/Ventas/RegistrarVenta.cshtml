@@ -1,0 +1,234 @@
+﻿@page
+@model PruebaTecnica.Neonet.AppWeb.Pages.Ventas.RegistrarVentaModel
+@{
+    ViewData["Title"] = "Registrar venta";
+}
+
+<div class="container mt-4">
+
+    <h2>Registrar venta</h2>
+    <hr />
+    <form method="post" id="formVenta">
+        <div class="mb-3">
+            <label class="form-label">Cliente</label>
+            <select asp-for="Venta.clienteId" class="form-select">
+                <option value="">Seleccione un cliente</option>
+                @foreach (var cliente in Model.Clientes)
+                {
+                    <option value="@cliente.id">
+                        @cliente.nombre
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Fecha</label>
+            <input asp-for="Venta.fecha" type="date" class="form-control" />
+        </div>
+
+        <hr />
+        <h4>Agregar producto</h4>
+        <div class="row">
+            <div class="col-md-5">
+                <label class="form-label">Producto</label>
+                <select id="producto" class="form-select">
+                    <option value="">Seleccione un producto</option>
+                    @foreach (var producto in Model.Productos)
+                    {
+                        <option value="@producto.id"
+                                data-nombre="@producto.nombre"
+                                data-precio="@producto.precio"
+                                data-stock="@producto.stock">
+                            @producto.nombre - Stock: @producto.stock
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Cantidad</label>
+                <input id="cantidad" type="number" class="form-control" value="1" min="1" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Precio unitario</label>
+
+                <input id="precio" type="number" class="form-control" min="0" step="0.01" />
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+
+                <button type="button" id="btnAgregar" class="btn btn-primary w-100">
+                    Agregar
+                </button>
+            </div>
+        </div>
+        <hr />
+
+        <h4>Detalle de venta</h4>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio unitario</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="detalleVenta">
+            </tbody>
+        </table>
+
+        <div class="text-end">
+            <h4>
+                Total: Q <span id="totalVenta">0.00</span>
+            </h4>
+            <button type="submit"class="btn btn-success">
+                Registrar venta
+            </button>
+        </div>
+        <div id="detallesHidden">
+        </div>
+    </form>
+
+</div>
+
+@section Scripts
+{
+    <script>
+        let carrito = [];
+        const selectProducto = document.getElementById("producto");
+        const inputPrecio = document.getElementById("precio");
+        const inputCantidad = document.getElementById("cantidad");
+        const btnAgregar = document.getElementById("btnAgregar");
+        const detalleVenta = document.getElementById("detalleVenta");
+        const totalVenta = document.getElementById("totalVenta");
+        const detallesHidden = document.getElementById("detallesHidden");
+
+        selectProducto.addEventListener("change", function () {
+
+            const opcionSeleccionada =
+                selectProducto.options[selectProducto.selectedIndex];
+
+            if (!selectProducto.value) {
+                inputPrecio.value = "";
+                return;
+            }
+
+            inputPrecio.value = opcionSeleccionada.dataset.precio;
+            inputCantidad.value = 1;
+        });
+
+        btnAgregar.addEventListener("click", function() {
+
+            const opcion = selectProducto.options[selectProducto.selectedIndex];
+
+            const productoId = parseInt(selectProducto.value);
+            const nombre = opcion.dataset.nombre;
+            const stock = parseInt(opcion.dataset.stock);
+            const cantidad = parseInt(inputCantidad.value);
+            const precioUnitario = parseFloat(inputPrecio.value);
+
+            if (!productoId) {
+                alert("Seleccione un producto.");
+                return;
+            }
+
+            if (cantidad <= 0) {
+                alert("La cantidad debe ser mayor a cero.");
+                return;
+            }
+
+            if (precioUnitario < 0 || isNaN(precioUnitario)) {
+                alert("Ingrese un precio válido.");
+                return;
+            }
+
+            const existente =carrito.find(x => x.productoId === productoId);
+
+            if (existente) {
+                const nuevaCantidad = existente.cantidad + cantidad;
+
+                if (nuevaCantidad > stock) {
+                    alert("La cantidad supera el stock disponible.");
+                    return;
+                }
+                existente.cantidad = nuevaCantidad;
+                // Si vuelve a ingresar el producto se mantiene el precio ingresado
+                existente.precioUnitario = precioUnitario;
+            }
+            else {
+                if (cantidad > stock) {
+                    alert("La cantidad supera el stock disponible.");
+                    return;
+                }
+
+                carrito.push({
+                    productoId,
+                    nombre,
+                    cantidad,
+                    precioUnitario,
+                    stock
+                });
+            }
+
+            renderCarrito();
+        });
+
+        function renderCarrito() {
+
+            detalleVenta.innerHTML = "";
+            detallesHidden.innerHTML = "";
+
+            let total = 0;
+
+            carrito.forEach((item, index) => {
+
+                const subtotal = item.cantidad * item.precioUnitario;
+
+                total += subtotal;
+
+                detalleVenta.innerHTML += `
+                    <tr>
+                        <td>${item.nombre}</td>
+                        <td>${item.cantidad}</td>
+                        <td>Q ${item.precioUnitario.toFixed(2)}</td>
+                        <td>Q ${subtotal.toFixed(2)}</td>
+                        <td>
+                            <button type="button"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="eliminarProducto(${item.productoId})">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                detallesHidden.innerHTML += `
+                    <input type="hidden"
+                           name="Venta.Detalles[${index}].idProducto"
+                           value="${item.productoId}" />
+
+                    <input type="hidden"
+                           name="Venta.Detalles[${index}].Cantidad"
+                           value="${item.cantidad}" />
+
+                    <input type="hidden"
+                           name="Venta.Detalles[${index}].PrecioUnitario"
+                           value="${item.precioUnitario}" />
+                `;
+            });
+
+            totalVenta.textContent = total.toFixed(2);
+        }
+
+        function eliminarProducto(productoId) {
+
+            carrito = carrito.filter(x => x.productoId !== productoId);
+            renderCarrito();
+        }
+
+    </script>
+}

@@ -1,0 +1,34 @@
+﻿@page
+@model PruebaTecnica.Neonet.AppWeb.Pages.Productos.IndexModel
+@{
+    ViewData["Title"] = "Productos";
+}
+
+<div class="container mt-4">
+
+    <h2>Productos disponibles</h2>
+    <hr />
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Producto</th>
+                <th>Precio</th>
+                <th>Stock disponible</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var producto in Model.Productos)
+            {
+                <tr>
+                    <td>@producto.id</td>
+                    <td>@producto.nombre</td>
+                    <td>Q @producto.precio.ToString("N2")</td>
+                    <td>@producto.stock</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+</div>
